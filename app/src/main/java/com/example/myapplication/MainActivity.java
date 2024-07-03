@@ -3,6 +3,7 @@ package com.example.myapplication;
 import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Toast;
@@ -26,6 +27,7 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "MainActivity";
     ActivityMainBinding binding;
     ArrayList<String> nameslist;
     ArrayList<Integer> idslist;
@@ -72,28 +74,56 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
+            HttpURLConnection httpURLConnection = null;
+            BufferedReader bufferedReader = null;
+
             try {
                 URL url = new URL("https://fetch-hiring.s3.amazonaws.com/hiring.json");
-                HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
-                InputStream inputStream = httpURLConnection.getInputStream();
-                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-                String line;
+                httpURLConnection = (HttpURLConnection) url.openConnection();
+                httpURLConnection.setRequestMethod("GET");
+                int responseCode = httpURLConnection.getResponseCode();
+                Log.d(TAG, "Response Code: " + responseCode);
 
-                while ((line = bufferedReader.readLine()) != null) {
-                    data.append(line);
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    InputStream inputStream = httpURLConnection.getInputStream();
+                    bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+                    String line;
+
+                    while ((line = bufferedReader.readLine()) != null) {
+                        data.append(line);
+                    }
+
+                    Log.d(TAG, "Data fetched: " + data.toString());
+                    parseJSONData(data.toString());
+                } else {
+                    showError("Failed to connect to the server. Response code: " + responseCode);
+                    Log.e(TAG, "Response Code: " + responseCode);
                 }
-
-                parseJSONData(data.toString());
 
             } catch (MalformedURLException e) {
                 e.printStackTrace();
                 showError("Invalid URL format.");
+                Log.e(TAG, "MalformedURLException: " + e.getMessage());
             } catch (IOException e) {
                 e.printStackTrace();
                 showError("Error reading data from server.");
+                Log.e(TAG, "IOException: " + e.getMessage());
             } catch (JSONException e) {
                 e.printStackTrace();
                 showError("Error parsing JSON data.");
+                Log.e(TAG, "JSONException: " + e.getMessage());
+            } finally {
+                if (httpURLConnection != null) {
+                    httpURLConnection.disconnect();
+                }
+                if (bufferedReader != null) {
+                    try {
+                        bufferedReader.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        Log.e(TAG, "IOException while closing BufferedReader: " + e.getMessage());
+                    }
+                }
             }
 
             mainHandler.post(new Runnable() {
