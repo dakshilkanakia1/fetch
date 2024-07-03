@@ -91,7 +91,7 @@ public class MainActivity extends AppCompatActivity {
                         int listId = names.getInt("listId");
                         String name = names.getString("name");
 
-                        if (name != null && !name.trim().isEmpty()) {
+                        if (name != null && name != "null" && !name.trim().isEmpty()) {
                             itemList.add(new Item(id, listId, name));
                         }
                     }
