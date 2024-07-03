@@ -19,13 +19,13 @@ My Fetch App is an Android application that fetches data from a remote server, p
 ## Screenshots
 
 ### Home Screen
-![Home Screen](images/home_screen.png)
+<img src="images/IMG_3599.jpg" alt="Home Screen" width="200" height="450"/>
 
 ### Fetching Data
-![Fetching Data](images/fetching_data.png)
+<img src="images/IMG_3598.jpg" alt="Fetching Data" width="200" height="450"/>
 
 ### Displaying Data
-![Displaying Data](images/displaying_data.png)
+<img src="images/IMG_3600.jpg" alt="Displaying Data" width="200" height="450"/>
 
 ## Prerequisites
 
