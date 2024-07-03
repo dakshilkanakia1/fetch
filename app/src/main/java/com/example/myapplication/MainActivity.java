@@ -1,3 +1,4 @@
+// MainActivity.java
 package com.example.myapplication;
 
 import android.app.ProgressDialog;
@@ -6,7 +7,7 @@ import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
-import android.widget.Toast;
+import android.widget.ListView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -27,12 +28,9 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
-    private static final String TAG = "MainActivity";
     ActivityMainBinding binding;
-    ArrayList<String> nameslist;
-    ArrayList<Integer> idslist;
-    ArrayList<Integer> listidslist;
-    ArrayAdapter<String> nameAdapter;
+    ArrayList<Item> itemList;
+    CustomAdapter itemAdapter;
     Handler mainHandler = new Handler();
     ProgressDialog progressDialog;
 
@@ -41,7 +39,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-        initializeNamesList();
+        initializeItemList();
         binding.button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -50,17 +48,14 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void initializeNamesList() {
-        nameslist = new ArrayList<>();
-        idslist = new ArrayList<>();
-        listidslist = new ArrayList<>();
-        nameAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, nameslist);
-        binding.nameslist.setAdapter(nameAdapter);
+    private void initializeItemList() {
+        itemList = new ArrayList<>();
+        itemAdapter = new CustomAdapter(this, itemList);
+        binding.nameslist.setAdapter(itemAdapter);
     }
 
     class FetchData extends Thread {
-
-        StringBuilder data = new StringBuilder();
+        String data = "";
 
         @Override
         public void run() {
@@ -74,56 +69,39 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
-            HttpURLConnection httpURLConnection = null;
-            BufferedReader bufferedReader = null;
-
             try {
                 URL url = new URL("https://fetch-hiring.s3.amazonaws.com/hiring.json");
-                httpURLConnection = (HttpURLConnection) url.openConnection();
-                httpURLConnection.setRequestMethod("GET");
-                int responseCode = httpURLConnection.getResponseCode();
-                Log.d(TAG, "Response Code: " + responseCode);
+                HttpURLConnection httpURLConnection = (HttpURLConnection) url.openConnection();
+                InputStream inputStream = httpURLConnection.getInputStream();
+                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+                StringBuilder stringBuilder = new StringBuilder();
+                String line;
 
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    InputStream inputStream = httpURLConnection.getInputStream();
-                    bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
-                    String line;
-
-                    while ((line = bufferedReader.readLine()) != null) {
-                        data.append(line);
-                    }
-
-                    Log.d(TAG, "Data fetched: " + data.toString());
-                    parseJSONData(data.toString());
-                } else {
-                    showError("Failed to connect to the server. Response code: " + responseCode);
-                    Log.e(TAG, "Response Code: " + responseCode);
+                while ((line = bufferedReader.readLine()) != null) {
+                    stringBuilder.append(line);
                 }
 
+                data = stringBuilder.toString();
+                if (!data.isEmpty()) {
+                    JSONArray users = new JSONArray(data);
+                    itemList.clear();
+                    for (int i = 0; i < users.length(); i++) {
+                        JSONObject names = users.getJSONObject(i);
+                        int id = names.getInt("id");
+                        int listId = names.getInt("listId");
+                        String name = names.getString("name");
+
+                        if (name != null && !name.trim().isEmpty()) {
+                            itemList.add(new Item(id, listId, name));
+                        }
+                    }
+                }
             } catch (MalformedURLException e) {
                 e.printStackTrace();
-                showError("Invalid URL format.");
-                Log.e(TAG, "MalformedURLException: " + e.getMessage());
             } catch (IOException e) {
-                e.printStackTrace();
-                showError("Error reading data from server.");
-                Log.e(TAG, "IOException: " + e.getMessage());
+                Log.e("MainActivity", "IOException: " + e.getMessage());
             } catch (JSONException e) {
-                e.printStackTrace();
-                showError("Error parsing JSON data.");
-                Log.e(TAG, "JSONException: " + e.getMessage());
-            } finally {
-                if (httpURLConnection != null) {
-                    httpURLConnection.disconnect();
-                }
-                if (bufferedReader != null) {
-                    try {
-                        bufferedReader.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        Log.e(TAG, "IOException while closing BufferedReader: " + e.getMessage());
-                    }
-                }
+                Log.e("MainActivity", "JSONException: " + e.getMessage());
             }
 
             mainHandler.post(new Runnable() {
@@ -131,39 +109,7 @@ public class MainActivity extends AppCompatActivity {
                 public void run() {
                     if (progressDialog.isShowing())
                         progressDialog.dismiss();
-                    nameAdapter.notifyDataSetChanged();
-                }
-            });
-        }
-
-        private void parseJSONData(String jsonData) throws JSONException {
-            JSONArray users = new JSONArray(jsonData);
-            nameslist.clear();
-            idslist.clear();
-            listidslist.clear();
-            for (int i = 0; i < users.length(); i++) {
-                JSONObject names = users.getJSONObject(i);
-                String name = names.optString("name", "No Name");
-                int id = names.optInt("id", -1);
-                int listId = names.optInt("listId", -1);
-
-                // Skip entries with empty or null names
-                if (name != null && !name.trim().isEmpty()) {
-                    nameslist.add(name);
-                    idslist.add(id);
-                    listidslist.add(listId);
-                }
-            }
-        }
-
-        private void showError(final String message) {
-            mainHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    if (progressDialog.isShowing())
-                        progressDialog.dismiss();
-                    // Show error message to the user, e.g., using a Toast
-                    Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show();
+                    itemAdapter.notifyDataSetChanged();
                 }
             });
         }
