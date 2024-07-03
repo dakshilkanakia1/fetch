@@ -25,6 +25,10 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -91,10 +95,12 @@ public class MainActivity extends AppCompatActivity {
                         int listId = names.getInt("listId");
                         String name = names.getString("name");
 
-                        if (name != null && name != "null" && !name.trim().isEmpty()) {
+                        if (name != null && name!= "null" && !name.trim().isEmpty()) {
                             itemList.add(new Item(id, listId, name));
                         }
                     }
+
+                    Collections.sort(itemList);
                 }
             } catch (MalformedURLException e) {
                 e.printStackTrace();
